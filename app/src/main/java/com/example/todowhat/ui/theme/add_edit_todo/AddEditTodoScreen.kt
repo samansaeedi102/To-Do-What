@@ -4,10 +4,11 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.todowhat.util.UiEvent
@@ -75,6 +76,33 @@ fun AddEditTodoScreen(
                 singleLine = false,
                 maxLines = 5
             )
+
+
+            var expanded by remember { mutableStateOf(false) }
+            var selectedItem by remember { mutableStateOf("All") }
+            val catList= listOf("All", "Personal", "Shopping", "Wishlist", "Work")
+
+            Column() {
+                Box {
+                    TextButton(onClick = { expanded = true }) {
+                        Row {
+                            Text(text = selectedItem, color = Color.White)
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = "")
+                        }
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        catList.forEach {
+                            DropdownMenuItem(onClick = {
+                                expanded = false
+                                selectedItem = it
+                                viewModel.onEvent(AddEditTodoEvent.OnCategoryChange(it))
+                            }) {
+                                Text(text = it)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

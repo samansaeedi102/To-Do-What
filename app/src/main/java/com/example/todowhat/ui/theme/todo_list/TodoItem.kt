@@ -2,10 +2,7 @@ package com.example.todowhat.ui.theme.todo_list
 
 import android.widget.CheckBox
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Checkbox
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
@@ -22,38 +19,41 @@ fun TodoItem(
     onEvent: (TodoListEvent) ->Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        elevation = 3.dp,
+        modifier = Modifier.padding(15.dp, 7.dp)
     ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = todo.title,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                todo.description?.let {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = it)
+                }
+                Text(text = todo.category!!)
+            }
+            Column() {
+                Checkbox(
+                    checked = todo.isDone,
+                    onCheckedChange = { isChecked ->
+                        onEvent(TodoListEvent.OnDoneChange(todo, isChecked))
+                    })
                 IconButton(onClick = {
                     onEvent(TodoListEvent.OnDeleteTodoClick(todo))
                 }) {
                     Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
                 }
             }
-            todo.description?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = it)
-            }
         }
-        Checkbox(
-            checked = todo.isDone,
-            onCheckedChange = { isChecked ->
-                onEvent(TodoListEvent.OnDoneChange(todo, isChecked))
-            })
     }
 }

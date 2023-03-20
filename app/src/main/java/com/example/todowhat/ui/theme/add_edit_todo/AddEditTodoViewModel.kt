@@ -1,6 +1,7 @@
 package com.example.todowhat.ui.theme.add_edit_todo
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
@@ -26,7 +27,8 @@ class AddEditTodoViewModel @Inject constructor(
         private set
     var description by mutableStateOf("")
         private set
-
+    var category by mutableStateOf("All")
+        private set
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
@@ -63,10 +65,16 @@ class AddEditTodoViewModel @Inject constructor(
                             title = title,
                             description = description,
                             isDone = todo?.isDone ?: false,
+                            category = category,
                             id = todo?.id
                         )
                     )
                     sendUiEvent(UiEvent.PopBackStack)
+                }
+            }
+            is AddEditTodoEvent.OnCategoryChange -> {
+                viewModelScope.launch {
+                    category = event.category
                 }
             }
         }
