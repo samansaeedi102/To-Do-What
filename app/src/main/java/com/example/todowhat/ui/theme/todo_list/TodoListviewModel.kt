@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.todowhat.data.Category
 import com.example.todowhat.data.Todo
 import com.example.todowhat.data.TodoRepository
 import com.example.todowhat.util.Routes
@@ -25,15 +26,43 @@ class TodoListviewModel @Inject constructor(
     var todos1 = todoRepository.getTodos()
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
-    val todosFlow = MutableStateFlow<List<Todo>>(emptyList())
     private var deletedTodo: Todo? = null
-    var catList = mutableStateListOf("All", "Personal", "Shopping", "Wishlist", "Work")
+    var catList = todoRepository.getCategories()
+
     init {
         viewModelScope.launch {
-            todos1.collect {
-                todosFlow.value = it
-            }
+            todoRepository.insertCategory(
+                Category(
+                    name = "All",
+                    id = 0
+                )
+            )
+            todoRepository.insertCategory(
+                Category(
+                    name = "Personal",
+                    id = 1
+                )
+            )
+            todoRepository.insertCategory(
+                Category(
+                    name = "Shopping",
+                    id = 2
+                )
+            )
+            todoRepository.insertCategory(
+                Category(
+                    name = "Wishlist",
+                    id = 3
+                )
+            )
+            todoRepository.insertCategory(
+                Category(
+                    name = "Work",
+                    id = 4
+                )
+            )
         }
+
     }
     fun onEvent(event: TodoListEvent) {
         when(event) {
@@ -42,21 +71,12 @@ class TodoListviewModel @Inject constructor(
             }
             is TodoListEvent.OnAddTodoClick -> {
                 sendUiEvent(UiEvent.Navigate(Routes.ADD_EDIT_TODO))
-                viewModelScope.launch {
-                    todos.collect {newData ->
-                        todosFlow.value = newData
-                    }
-                }
             }
             is TodoListEvent.OnUndoDeleteClick -> {
                 deletedTodo?.let { todo ->
                     viewModelScope.launch {
                         todoRepository.insertTodo(todo)
                         todos = todoRepository.getTodos()
-                        Log.d(TAG, "injas ${todos.first()}")
-                        todos.collect {newData ->
-                            todosFlow.value = newData
-                        }
                     }
                 }
             }
@@ -68,11 +88,6 @@ class TodoListviewModel @Inject constructor(
                         message = "Todo Deleted",
                         action = "Undo"
                     ))
-                    todos = todoRepository.getTodos()
-                    Log.d(TAG, "injas ${todos.first()}")
-                    todos.collect {newData ->
-                        todosFlow.value = newData
-                    }
                 }
             }
             is TodoListEvent.OnDoneChange -> {
@@ -82,24 +97,22 @@ class TodoListviewModel @Inject constructor(
                             isDone = event.isDone
                         )
                     )
-                    todos = todoRepository.getTodos()
-                    Log.d(TAG, "injas ${todos.first()}")
-                    todos.collect {newData ->
-                        todosFlow.value = newData
-                    }
                 }
             }
             is TodoListEvent.OnCategorySelect -> {
                 viewModelScope.launch {
                     category = event.category
                     todos = todoRepository.getTodos()
-                    Log.d(TAG, "injas ${todos.first()}")
-                    todos.collect {newData ->
-                        todosFlow.value = newData
-                    }
-                    todos.collect {newData ->
-                        todosFlow.value = newData
-                    }
+                }
+            }
+            is TodoListEvent.OnAddCategory -> {
+                viewModelScope.launch {
+                    todoRepository.insertCategory(
+                        category = Category(
+                            name = event.category,
+
+                        )
+                    )
                 }
             }
         }

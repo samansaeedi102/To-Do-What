@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.room.Update
+import com.example.todowhat.data.Category
 import com.example.todowhat.data.Todo
 import com.example.todowhat.util.UiEvent
 import kotlinx.coroutines.flow.Flow
@@ -37,11 +38,21 @@ fun TodoListScreen(
     viewModel: TodoListviewModel = hiltViewModel()
 ) {
     var todos = viewModel.todos1.collectAsState(initial = emptyList())
+    var filteredTodos = listOf<Todo>()
     val scaffoldState = rememberScaffoldState()
     var expanded by remember { mutableStateOf(false) }
-
-    var selectedItem by rememberSaveable { mutableStateOf(viewModel.catList[0]) }
+    val catList = viewModel.catList.collectAsState(initial = emptyList())
+    var selectedItem by remember { mutableStateOf(Category(name = "All")) }
     val openDialog by remember{ mutableStateOf(false) }
+    fun filterTodos() {
+        filteredTodos = if(selectedItem.name != "All") {
+            todos.value.filter {
+                it.category == selectedItem.name
+            }
+        } else{
+            todos.value
+        }
+    }
     LaunchedEffect(key1 = true) {
         viewModel.uiEvent.collect { event ->
             when(event) {
@@ -76,44 +87,14 @@ fun TodoListScreen(
                                  .padding(8.dp),
                              tint = Color.White
                          )
-//                         Column() {
-//                             Box {
-//                                 TextButton(onClick = { expanded = true }) {
-//                                     Row {
-//                                         Text(text = selectedItem, color = Color.White)
-//                                         Icon(Icons.Default.ArrowDropDown, contentDescription = "")
-//                                     }
-//                                 }
-//                                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-//                                     catList.forEach {
-//                                         DropdownMenuItem(onClick = {
-//                                             expanded = false
-//                                             selectedItem = it
-//                                             viewModel.onEvent(TodoListEvent.OnCategorySelect(it))
-//                                             Log.d(TAG, "injas1 ${todos.value}")
-//                                         }) {
-//                                             Text(text = it)
-//                                         }
-//                                     }
-//                                     Text(text = "Add Category" , modifier = Modifier.clickable {
-//                                        if(openDialog) {
-//                                            AddCategoryDialog(
-//                                                onAddCategory = { category ->
-//                                                    onAddCategory(category)
-//                                                    expanded = true
-//                                                },
-//                                                onDismiss = { showDialog = false }                                            )
-//                                        }
-//                                     }
-//                                 }
-//                             }
-//                         }
-                         CategoriesDropdown(viewModel.catList,selectedItem,onCategorySelected = { category ->
+                         CategoriesDropdown(catList.value,selectedItem,onCategorySelected = { category ->
                              selectedItem = category
                          },onAddCategory = { category ->
-                             viewModel.catList += category
-                             selectedItem = category
-                         } )
+                             //catList += category
+                             viewModel.onEvent(TodoListEvent.OnAddCategory(category))
+                             selectedItem = Category(category)
+                         },
+                         viewModel)
                          Spacer(modifier = Modifier.weight(1f))
                          Icon(
                              imageVector = Icons.Default.Search,
@@ -129,6 +110,7 @@ fun TodoListScreen(
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 viewModel.onEvent(TodoListEvent.OnAddTodoClick)
+                //Log.d(TAG, "$catList injas")
             }) {
                 Icon(imageVector = Icons.Default.Add,
                     contentDescription = "Add Todo"
@@ -136,12 +118,11 @@ fun TodoListScreen(
             }
         }
     ) {
+        filterTodos()
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
-            items(todos.value.filter {
-                it.category == selectedItem
-            }) {todo ->
+            items(filteredTodos) {todo ->
                 TodoItem(
                     todo = todo,
                     onEvent = viewModel::onEvent,
@@ -158,43 +139,13 @@ fun TodoListScreen(
     }
 }
 
-
-@Composable
-fun CategoryMenu(viewModel: TodoListviewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedItem by rememberSaveable { mutableStateOf("All") }
-    val catList = remember { mutableStateListOf("All ", "Personal", "Shopping", "Wishlist", "Work")}
-
-
-    Column() {
-        Box {
-            TextButton(onClick = { expanded = true }) {
-                Row {
-                    Text(text = selectedItem, color = Color.White)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "")
-                }
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                catList.forEach {
-                    DropdownMenuItem(onClick = {
-                        expanded = false
-                        selectedItem = it
-                        viewModel.onEvent(TodoListEvent.OnCategorySelect(it))
-                    }) {
-                        Text(text = it)
-                    }
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun AddCategoryDialog(
     onAddCategory: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    viewModel: TodoListviewModel
 ) {
-    var category by remember { mutableStateOf("") }
+    var category by remember{ mutableStateOf("") }
     AlertDialog(
         onDismissRequest = { onDismiss() },
         title = { Text(text = "Add Category") },
@@ -202,7 +153,8 @@ fun AddCategoryDialog(
             TextField(
                 value = category,
                 onValueChange = { category = it },
-                label = { Text(text = "Category Name") }
+                label = { Text(text = "Category Name") },
+                enabled = true
             )
         },
         confirmButton = {
@@ -222,10 +174,11 @@ fun AddCategoryDialog(
 }
 @Composable
 fun CategoriesDropdown(
-    categories: List<String>,
-    selectedCategory: String?,
-    onCategorySelected: (String) -> Unit,
-    onAddCategory: (String) -> Unit
+    categories: List<Category>,
+    selectedCategory: Category?,
+    onCategorySelected: (Category) -> Unit,
+    onAddCategory: (String) -> Unit,
+    viewModel: TodoListviewModel
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
@@ -245,7 +198,7 @@ fun CategoriesDropdown(
                     },
                     enabled = category != selectedCategory
                 ) {
-                    Text(text = category)
+                    Text(text = category.name)
                 }
             }
             DropdownMenuItem(onClick = { showDialog = true }) {
@@ -256,13 +209,14 @@ fun CategoriesDropdown(
             AddCategoryDialog(
                 onAddCategory = { category ->
                     onAddCategory(category)
-                    expanded = true
+                    expanded = false
                 },
-                onDismiss = { showDialog = false }
+                onDismiss = { showDialog = false },
+                viewModel = viewModel
             )
         }
         Text(
-            text = selectedCategory ?: "Select Category",
+            text = selectedCategory?.name ?: "Select Category",
             modifier = Modifier.clickable(onClick = { expanded = true })
         )
     }

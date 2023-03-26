@@ -22,12 +22,12 @@ object AppModule {
             app,
             TodoDatabase::class.java,
             "todo_db"
-        ).build()
+        ).allowMainThreadQueries().build()
     }
 
     @Provides
     @Singleton
     fun provideTodoRepository(todoDatabase: TodoDatabase): TodoRepository {
-        return TodoRepositoryImp(todoDatabase.dao)
+        return TodoRepositoryImp(todoDatabase.dao, todoDatabase.categoryDao)
     }
 }

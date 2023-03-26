@@ -8,4 +8,7 @@ interface TodoRepository {
     suspend fun getTodoById(id: Int): Todo?
 //    fun getTodos(category: String): Flow<List<Todo>>
     fun getTodos(): Flow<List<Todo>>
+
+    suspend fun insertCategory(category: Category)
+    fun getCategories(): Flow<List<Category>>
 }

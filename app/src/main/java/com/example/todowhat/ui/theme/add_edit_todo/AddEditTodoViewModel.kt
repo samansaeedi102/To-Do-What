@@ -31,7 +31,7 @@ class AddEditTodoViewModel @Inject constructor(
         private set
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
-
+    var catList = todoRepository.getCategories()
     init {
         val todoId = savedStateHandle.get<Int>("todoId")!!
         if(todoId != -1) {

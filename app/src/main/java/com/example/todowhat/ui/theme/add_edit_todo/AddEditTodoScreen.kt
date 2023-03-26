@@ -80,7 +80,7 @@ fun AddEditTodoScreen(
 
             var expanded by remember { mutableStateOf(false) }
             var selectedItem by remember { mutableStateOf("All") }
-            val catList= listOf("All", "Personal", "Shopping", "Wishlist", "Work")
+            val catList= viewModel.catList.collectAsState(initial = emptyList())
 
             Column() {
                 Box {
@@ -91,13 +91,13 @@ fun AddEditTodoScreen(
                         }
                     }
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        catList.forEach {
+                        catList.value.forEach {
                             DropdownMenuItem(onClick = {
                                 expanded = false
-                                selectedItem = it
-                                viewModel.onEvent(AddEditTodoEvent.OnCategoryChange(it))
+                                selectedItem = it.name
+                                viewModel.onEvent(AddEditTodoEvent.OnCategoryChange(it.name))
                             }) {
-                                Text(text = it)
+                                Text(text = it.name)
                             }
                         }
                     }

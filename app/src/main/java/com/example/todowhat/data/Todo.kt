@@ -9,6 +9,7 @@ data class Todo(
     val description: String?,
     val isDone: Boolean,
     @PrimaryKey val id: Int? = null,
-    var category: String? = "All"
+    var category: String? = "All",
+    val allCat: String = "All"
 
 )
