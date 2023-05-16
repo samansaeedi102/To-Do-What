@@ -11,4 +11,6 @@ sealed class TodoListEvent {
     object OnAddTodoClick: TodoListEvent()
     data class OnCategorySelect(var category: String): TodoListEvent()
     data class OnAddCategory(var category: String): TodoListEvent()
+    object OnSearchClick: TodoListEvent()
+    data class OnSearch(var searchTerm: String): TodoListEvent()
 }

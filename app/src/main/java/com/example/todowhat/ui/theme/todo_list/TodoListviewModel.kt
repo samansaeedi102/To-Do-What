@@ -16,19 +16,25 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class UiState(
+    var searchUnsuccessful: Boolean = false,
+    val currentSearchedTerm: String = "",
+    val noInternet: Boolean = false
+)
+
 @HiltViewModel
 class TodoListviewModel @Inject constructor(
     private val todoRepository: TodoRepository
 ): ViewModel() {
-    var category by mutableStateOf("All")
-        private set
-    private var todos = todoRepository.getTodos()
-    var todos1 = todoRepository.getTodos()
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    var todos = todoRepository.getTodos()
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
     private var deletedTodo: Todo? = null
     var catList = todoRepository.getCategories()
-
+    var selectedItem by mutableStateOf("All")
+    var searchClicked by mutableStateOf(false)
     init {
         viewModelScope.launch {
             todoRepository.insertCategory(
@@ -101,7 +107,7 @@ class TodoListviewModel @Inject constructor(
             }
             is TodoListEvent.OnCategorySelect -> {
                 viewModelScope.launch {
-                    category = event.category
+                    selectedItem = event.category
                     todos = todoRepository.getTodos()
                 }
             }
@@ -113,6 +119,17 @@ class TodoListviewModel @Inject constructor(
 
                         )
                     )
+                }
+            }
+            is TodoListEvent.OnSearchClick -> {
+                searchClicked = !searchClicked
+                _uiState.update {
+                    it.copy(currentSearchedTerm = "")
+                }
+            }
+            is TodoListEvent.OnSearch -> {
+                _uiState.update {
+                    it.copy(currentSearchedTerm = event.searchTerm)
                 }
             }
         }

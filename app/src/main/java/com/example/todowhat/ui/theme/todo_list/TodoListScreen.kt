@@ -1,7 +1,6 @@
 package com.example.todowhat.ui.theme.todo_list
 
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.content.ContentValues.TAG
 import android.util.Log
 import androidx.compose.foundation.background
@@ -9,27 +8,32 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.room.Update
+import com.example.todowhat.R
 import com.example.todowhat.data.Category
 import com.example.todowhat.data.Todo
+import com.example.todowhat.ui.theme.AppTop
+import com.example.todowhat.ui.theme.Black
+import com.example.todowhat.ui.theme.Gray
+import com.example.todowhat.ui.theme.OnCard
+import com.example.todowhat.util.SearchTextField
 import com.example.todowhat.util.UiEvent
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.drop
 
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
@@ -37,20 +41,30 @@ fun TodoListScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
     viewModel: TodoListviewModel = hiltViewModel()
 ) {
-    var todos = viewModel.todos1.collectAsState(initial = emptyList())
+    var todos = viewModel.todos.collectAsState(initial = emptyList())
     var filteredTodos = listOf<Todo>()
     val scaffoldState = rememberScaffoldState()
-    var expanded by remember { mutableStateOf(false) }
     val catList = viewModel.catList.collectAsState(initial = emptyList())
-    var selectedItem by remember { mutableStateOf(Category(name = "All")) }
-    val openDialog by remember{ mutableStateOf(false) }
-    fun filterTodos() {
-        filteredTodos = if(selectedItem.name != "All") {
+    var selectedItem = viewModel.selectedItem
+    val uiState by viewModel.uiState.collectAsState()
+    val searchTextFieldFocusRequester = remember { FocusRequester() }
+    if(viewModel.searchClicked) {
+        LaunchedEffect(Unit) {
+            searchTextFieldFocusRequester.requestFocus()
+        }
+    }
+    fun filteredTodos() {
+        filteredTodos = if(selectedItem != "All") {
             todos.value.filter {
-                it.category == selectedItem.name
+                it.category == selectedItem
             }
         } else{
             todos.value
+        }
+    }
+    fun filterByTitle() {
+        filteredTodos = todos.value.filter {
+            it.title.contains(uiState.currentSearchedTerm)
         }
     }
     LaunchedEffect(key1 = true) {
@@ -73,44 +87,86 @@ fun TodoListScreen(
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
-                 Card(elevation = 3.dp) {
-                     Row(
-                         modifier = Modifier
-                             .fillMaxWidth()
-                             .background(color = Color.Blue)
-                     ) {
-                         Icon(
-                             imageVector = Icons.Default.CheckCircle,
-                             contentDescription = "Todos",
-                             Modifier
-                                 .size(50.dp)
-                                 .padding(8.dp),
-                             tint = Color.White
-                         )
-                         CategoriesDropdown(catList.value,selectedItem,onCategorySelected = { category ->
-                             selectedItem = category
-                         },onAddCategory = { category ->
-                             //catList += category
-                             viewModel.onEvent(TodoListEvent.OnAddCategory(category))
-                             selectedItem = Category(category)
-                         },
-                         viewModel)
-                         Spacer(modifier = Modifier.weight(1f))
-                         Icon(
-                             imageVector = Icons.Default.Search,
-                             contentDescription = "Search",
-                             Modifier
-                                 .size(50.dp)
-                                 .padding(8.dp),
-                             tint = Color.White
-                         )
+                Card(elevation = 3.dp, modifier = Modifier.fillMaxHeight(0.07f)) {
+                     if(!viewModel.searchClicked) {
+                         Row(
+                             modifier = Modifier
+                                 .fillMaxWidth()
+                                 .background(color = AppTop),
+                             verticalAlignment = Alignment.CenterVertically
+                         ) {
+                             Icon(
+                                     imageVector = Icons.Default.CheckCircle,
+                                     contentDescription = "Todos",
+                                 Modifier
+                                     .size(50.dp)
+                                     .padding(8.dp),
+                                     tint = Color.Black
+                             )
+                             CategoriesDropdown(catList.value,selectedItem,onCategorySelected = { category ->
+                                 viewModel.onEvent(TodoListEvent.OnCategorySelect(category = category))
+                             },onAddCategory = { category ->
+                                 viewModel.onEvent(TodoListEvent.OnAddCategory(category))
+                                 selectedItem = Category(category).name
+                             },
+                                 viewModel)
+                             Spacer(modifier = Modifier.weight(1f))
+                             IconButton(onClick = {
+                                 viewModel.onEvent(TodoListEvent.OnSearchClick)
+                             }) {
+                                 Icon(
+                                     imageVector = Icons.Default.Search,
+                                     contentDescription = "Search",
+                                     Modifier
+                                         .size(50.dp)
+                                         .padding(8.dp),
+                                     tint = Color.Black
+                                 )
+                             }
+                             OptionMenu()
+                         }
+                     } else {
+                         selectedItem = "All"
+                         Row(
+                             modifier = Modifier
+                                 .fillMaxWidth()
+                                 .background(color = AppTop),
+                             verticalAlignment = Alignment.CenterVertically
+                         ) {
+                             IconButton(onClick = {
+                                 viewModel.onEvent(TodoListEvent.OnSearchClick)
+                                 selectedItem = "Personal"
+
+                             }) {
+                                 Icon(imageVector = Icons.Default.ArrowBack,
+                                     contentDescription = "cancel search",
+                                     tint = Black
+                                 )
+                             }
+                             Spacer(modifier = Modifier.width(20.dp))
+                             SearchTextField(
+                                 value = uiState.currentSearchedTerm ,
+                                 onCloseClick = { viewModel.onEvent(TodoListEvent.OnSearchClick) },
+                                 onValueChange = {
+                                     viewModel.onEvent(TodoListEvent.OnSearch(it))
+                                                 },
+                                 keyboardOptions = KeyboardOptions(
+                                     keyboardType = KeyboardType.Text,
+                                     imeAction = ImeAction.Search
+                                 ),
+                                 keyboardActions = KeyboardActions(
+                                     onSearch = {}
+                                 ),
+                                 focusRequester = searchTextFieldFocusRequester,
+                                 icon = Icons.Default.Search
+                             )
+                         }
                      }
                  }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 viewModel.onEvent(TodoListEvent.OnAddTodoClick)
-                //Log.d(TAG, "$catList injas")
             }) {
                 Icon(imageVector = Icons.Default.Add,
                     contentDescription = "Add Todo"
@@ -118,22 +174,57 @@ fun TodoListScreen(
             }
         }
     ) {
-        filterTodos()
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(filteredTodos) {todo ->
-                TodoItem(
-                    todo = todo,
-                    onEvent = viewModel::onEvent,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            viewModel.onEvent(TodoListEvent.OnTodoClick(todo))
+        if(viewModel.searchClicked) {
+            filterByTitle()
+            if(filteredTodos.isEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "${uiState.currentSearchedTerm} not found",
+                        modifier = Modifier.align(alignment = Alignment.CenterHorizontally),
+                        fontSize = 25.sp
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(filteredTodos) {todo ->
+                        TodoItem(
+                            todo = todo,
+                            onEvent = viewModel::onEvent,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.onEvent(TodoListEvent.OnTodoClick(todo))
 
-                        }
-                        .padding(16.dp)
-                )
+                                }
+                                .padding(16.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            filteredTodos()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(filteredTodos) {todo ->
+                    TodoItem(
+                        todo = todo,
+                        onEvent = viewModel::onEvent,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.onEvent(TodoListEvent.OnTodoClick(todo))
+
+                            }
+                            .padding(16.dp)
+                    )
+                }
             }
         }
     }
@@ -153,21 +244,32 @@ fun AddCategoryDialog(
             TextField(
                 value = category,
                 onValueChange = { category = it },
-                label = { Text(text = "Category Name") },
-                enabled = true
+                enabled = true,
+                placeholder = { Text(text = "Enter new category")},
+                leadingIcon = {Icon(imageVector = Icons.Default.Add, contentDescription = "search", tint = Black)},
+                colors = TextFieldDefaults.textFieldColors(
+                    textColor = Color.Black,
+                    disabledTextColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    backgroundColor =  Gray
+                )
+
             )
         },
         confirmButton = {
             TextButton(onClick = {
                 onAddCategory(category)
+                viewModel.onEvent(TodoListEvent.OnCategorySelect(category = category))
                 onDismiss()
             }) {
-                Text(text = "Add")
+                Text(text = "Add", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = { onDismiss() }) {
-                Text(text = "Cancel")
+                Text(text = "Cancel", color = Color.White)
             }
         }
     )
@@ -175,8 +277,8 @@ fun AddCategoryDialog(
 @Composable
 fun CategoriesDropdown(
     categories: List<Category>,
-    selectedCategory: Category?,
-    onCategorySelected: (Category) -> Unit,
+    selectedCategory: String?,
+    onCategorySelected: (String) -> Unit,
     onAddCategory: (String) -> Unit,
     viewModel: TodoListviewModel
 ) {
@@ -193,10 +295,10 @@ fun CategoriesDropdown(
             categories.forEach { category ->
                 DropdownMenuItem(
                     onClick = {
-                        onCategorySelected(category)
+                        onCategorySelected(category.name)
                         expanded = false
                     },
-                    enabled = category != selectedCategory
+                    enabled = category.name != selectedCategory
                 ) {
                     Text(text = category.name)
                 }
@@ -216,8 +318,27 @@ fun CategoriesDropdown(
             )
         }
         Text(
-            text = selectedCategory?.name ?: "Select Category",
-            modifier = Modifier.clickable(onClick = { expanded = true })
+            text = selectedCategory ?: "Select Category",
+            modifier = Modifier.clickable(onClick = { expanded = true }),
+            color = Black
         )
     }
+}
+
+@Composable
+fun OptionMenu() {
+    var showMenu by remember { mutableStateOf(false) }
+
+        Box(modifier = Modifier) {
+            IconButton(onClick = { showMenu = !showMenu }) {
+                Icon(Icons.Default.MoreVert, "", tint = Black)
+            }
+            DropdownMenu(expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(onClick = { /*TODO*/ }) {
+                    Text(text = "Categories")
+                }
+            }
+        }
 }

@@ -38,7 +38,7 @@ fun AddEditTodoScreen(
         scaffoldState = scaffoldState,
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+           ,
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 viewModel.onEvent(AddEditTodoEvent.OnSaveTodoClick)
@@ -51,7 +51,7 @@ fun AddEditTodoScreen(
         }
     ) {
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().padding(20.dp)
         ) {
             TextField(
                 value = viewModel.title,
@@ -86,7 +86,7 @@ fun AddEditTodoScreen(
                 Box {
                     TextButton(onClick = { expanded = true }) {
                         Row {
-                            Text(text = selectedItem, color = Color.White)
+                            Text(text = selectedItem)
                             Icon(Icons.Default.ArrowDropDown, contentDescription = "")
                         }
                     }
